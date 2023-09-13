@@ -19,6 +19,7 @@
     "start:typescript": "npm run build:typescript -- --watch"
   },
   "dependencies": {
+    "@fluentui/react-components": "^9.31.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },
