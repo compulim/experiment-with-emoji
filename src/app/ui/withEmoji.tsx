@@ -17,30 +17,36 @@ import SelectionAndValue from './private/SelectionAndValue';
 type SupportedHTMLElement = HTMLInputElement | HTMLTextAreaElement;
 
 export type InputTargetProps<H> = {
+  disabled?: boolean;
   onBlur?: (event: FocusEvent<H>) => void;
   onChange?: (event: ChangeEvent<H>) => void;
   onFocus: (event: FocusEvent<H>) => void;
   onKeyDown?: (event: KeyboardEvent<H>) => void;
   onSelect?: (event: SyntheticEvent<H>) => void;
+  readOnly?: boolean;
   ref: Ref<H | null>;
   value?: string;
 };
 
 type WithEmojiProps<H> = {
   componentType: ComponentType<InputTargetProps<H>>;
+  disabled?: boolean;
   emojiSet?: Map<string, string>;
   onBlur?: (event: FocusEvent<H>) => void;
   onChange?: (value: string) => void;
   onFocus?: (event: FocusEvent<H>) => void;
+  readOnly?: boolean;
   value?: string;
 };
 
 function WithEmojiController<H extends SupportedHTMLElement>({
   componentType,
+  disabled,
   emojiSet = defaultEmojiSet,
   onBlur,
   onChange,
   onFocus,
+  readOnly,
   value = ''
 }: WithEmojiProps<H>) {
   const inputElementRef = useRef<H>(null);
@@ -161,11 +167,13 @@ function WithEmojiController<H extends SupportedHTMLElement>({
   useEffect(rememberInputState, [rememberInputState]);
 
   return React.createElement(componentType, {
+    disabled,
     onBlur,
     onChange: handleChange,
     onFocus: handleFocus,
     onKeyDown: handleKeyDown,
     onSelect: handleSelect,
+    readOnly,
     ref: inputElementRef,
     value: value || ''
   });
@@ -176,8 +184,25 @@ export default function withEmoji<
   H extends SupportedHTMLElement,
   T extends ComponentType<InputTargetProps<H>> = ComponentType<InputTargetProps<H>>
 >(componentType: T): ComponentType<Omit<WithEmojiProps<H>, 'componentType'>> {
-  const WithEmoji = ({ onChange, emojiSet, value }: Omit<WithEmojiProps<H>, 'componentType'>) => (
-    <WithEmojiController<H> componentType={componentType} emojiSet={emojiSet} onChange={onChange} value={value} />
+  const WithEmoji = ({
+    disabled,
+    emojiSet,
+    onBlur,
+    onChange,
+    onFocus,
+    readOnly,
+    value
+  }: Omit<WithEmojiProps<H>, 'componentType'>) => (
+    <WithEmojiController<H>
+      componentType={componentType}
+      disabled={disabled}
+      emojiSet={emojiSet}
+      onBlur={onBlur}
+      onChange={onChange}
+      onFocus={onFocus}
+      readOnly={readOnly}
+      value={value}
+    />
   );
 
   WithEmoji.displayName = `WithEmoji<${componentType.displayName}>`;
