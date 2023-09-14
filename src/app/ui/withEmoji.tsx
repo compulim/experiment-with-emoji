@@ -17,8 +17,9 @@ import SelectionAndValue from './private/SelectionAndValue';
 type SupportedHTMLElement = HTMLInputElement | HTMLTextAreaElement;
 
 export type InputTargetProps<H> = {
+  onBlur?: (event: FocusEvent<H>) => void;
   onChange?: (event: ChangeEvent<H>) => void;
-  onFocus?: (event: FocusEvent<H>) => void;
+  onFocus: (event: FocusEvent<H>) => void;
   onKeyDown?: (event: KeyboardEvent<H>) => void;
   onSelect?: (event: SyntheticEvent<H>) => void;
   ref: Ref<H | null>;
@@ -28,18 +29,23 @@ export type InputTargetProps<H> = {
 type WithEmojiProps<H> = {
   componentType: ComponentType<InputTargetProps<H>>;
   emojiSet?: Map<string, string>;
+  onBlur?: (event: FocusEvent<H>) => void;
   onChange?: (value: string) => void;
+  onFocus?: (event: FocusEvent<H>) => void;
   value?: string;
 };
 
 function WithEmojiController<H extends SupportedHTMLElement>({
   componentType,
   emojiSet = defaultEmojiSet,
+  onBlur,
   onChange,
+  onFocus,
   value = ''
 }: WithEmojiProps<H>) {
   const inputElementRef = useRef<H>(null);
   const onChangeRef = useRefFrom(onChange);
+  const onFocusRef = useRefFrom(onFocus);
   const placeCheckpointOnChangeRef = useRef<boolean>(false);
   const prevInputStateRef = useRef<SelectionAndValue>(new SelectionAndValue('', Infinity, Infinity));
   const undoStackRef = useRef<SelectionAndValue[]>([]);
@@ -108,11 +114,16 @@ function WithEmojiController<H extends SupportedHTMLElement>({
     [placeCheckpointOnChangeRef, prevInputStateRef, setSelectionRangeAndValue, undoStackRef, valueRef]
   );
 
-  const handleFocus = useCallback(() => {
-    rememberInputState();
+  const handleFocus = useCallback<(event: FocusEvent<H>) => void>(
+    event => {
+      onFocusRef.current?.(event);
 
-    placeCheckpointOnChangeRef.current = true;
-  }, [placeCheckpointOnChangeRef, rememberInputState]);
+      rememberInputState();
+
+      placeCheckpointOnChangeRef.current = true;
+    },
+    [onFocusRef, placeCheckpointOnChangeRef, rememberInputState]
+  );
 
   const handleKeyDown = useCallback<(event: KeyboardEvent<H>) => void>(
     event => {
@@ -150,6 +161,7 @@ function WithEmojiController<H extends SupportedHTMLElement>({
   useEffect(rememberInputState, [rememberInputState]);
 
   return React.createElement(componentType, {
+    onBlur,
     onChange: handleChange,
     onFocus: handleFocus,
     onKeyDown: handleKeyDown,
