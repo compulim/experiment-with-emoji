@@ -45,9 +45,13 @@ function WithEmojiController<H extends SupportedHTMLElement>({ componentType, on
   const inputElementRef = useRef<H>(null);
   const onChangeRef = useRefFrom(onChange);
   const placeCheckpointOnChangeRef = useRef<boolean>(false);
-  const prevInputStateRef = useRef<SelectionAndValue>();
+  const prevInputStateRef = useRef<SelectionAndValue>({
+    selectionEnd: Infinity,
+    selectionStart: Infinity,
+    value: value || ''
+  });
   const replaceEmoticon = useReplaceEmoticon();
-  const undoStackRef = useRef<(SelectionAndValue | undefined)[]>([]);
+  const undoStackRef = useRef<SelectionAndValue[]>([]);
 
   const rememberInputState = useCallback(() => {
     const { current } = inputElementRef;
@@ -66,7 +70,7 @@ function WithEmojiController<H extends SupportedHTMLElement>({ componentType, on
   // This is for moving the selection while setting the send box value.
   // If we only use setSendBox, we will need to wait for the next render cycle to get the value in, before we can set selectionEnd/Start.
   const setSelectionRangeAndValue = useCallback(
-    ({ selectionEnd, selectionStart, value }: SelectionAndValue) => {
+    (value: string, selectionStart: number | null, selectionEnd: number | null) => {
       if (inputElementRef.current) {
         // We need to set the value, before selectionStart/selectionEnd.
         inputElementRef.current.value = value;
@@ -98,11 +102,7 @@ function WithEmojiController<H extends SupportedHTMLElement>({ componentType, on
         }));
       }
 
-      setSelectionRangeAndValue({
-        selectionEnd: nextSelectionEnd,
-        selectionStart: nextSelectionStart,
-        value: nextValue
-      });
+      setSelectionRangeAndValue(nextValue, nextSelectionStart, nextSelectionEnd);
 
       onChangeRef.current?.(nextValue);
 
@@ -120,13 +120,7 @@ function WithEmojiController<H extends SupportedHTMLElement>({ componentType, on
       if (placeCheckpointOnChangeRef.current) {
         const { current } = prevInputStateRef;
 
-        undoStackRef.current.push(
-          current
-            ? {
-                ...current
-              }
-            : undefined
-        );
+        undoStackRef.current.push({ ...current });
 
         placeCheckpointOnChangeRef.current = false;
       }
@@ -139,7 +133,7 @@ function WithEmojiController<H extends SupportedHTMLElement>({ componentType, on
 
         placeCheckpointOnChangeRef.current = true;
 
-        setSelectionRangeAndValue(nextInputState);
+        setSelectionRangeAndValue(nextInputState.value, nextInputState.selectionEnd, nextInputState.selectionStart);
       }
     },
     [placeCheckpointOnChangeRef, prevInputStateRef, setSelectionRangeAndValue, setTextBoxValue, undoStackRef]
@@ -166,7 +160,11 @@ function WithEmojiController<H extends SupportedHTMLElement>({ componentType, on
           prevInputStateRef.current = { selectionEnd: 0, selectionStart: 0, value: '' };
         }
 
-        setSelectionRangeAndValue(prevInputStateRef.current);
+        setSelectionRangeAndValue(
+          prevInputStateRef.current.value,
+          prevInputStateRef.current.selectionStart,
+          prevInputStateRef.current.selectionEnd
+        );
       }
     },
     [prevInputStateRef, setSelectionRangeAndValue, undoStackRef]
@@ -174,7 +172,7 @@ function WithEmojiController<H extends SupportedHTMLElement>({ componentType, on
 
   const handleSelect = useCallback<(event: SyntheticEvent<H>) => void>(
     ({ currentTarget: { selectionEnd, selectionStart, value } }) => {
-      if (value === prevInputStateRef.current?.value) {
+      if (value === prevInputStateRef.current.value) {
         // When caret move, we should push to undo stack on change.
         placeCheckpointOnChangeRef.current = true;
       }
