@@ -10,6 +10,7 @@ import React, {
   useEffect,
   useRef
 } from 'react';
+import { wrapWith } from 'react-wrap-with';
 
 import defaultEmojiSet from './defaultEmojiSet';
 
@@ -33,14 +34,29 @@ type WithEmojiProps<H> = {
   value?: string;
 };
 
-type SelectionRange = {
-  selectionEnd: number | null;
-  selectionStart: number | null;
-};
+class SelectionAndValue {
+  constructor(value: string, selectionStart: number | null, selectionEnd: number | null) {
+    this.#selectionEnd = selectionEnd;
+    this.#selectionStart = selectionStart;
+    this.#value = value;
+  }
 
-type SelectionAndValue = SelectionRange & {
-  value: string;
-};
+  #value: string;
+  #selectionEnd: number | null;
+  #selectionStart: number | null;
+
+  get value(): string {
+    return this.#value;
+  }
+
+  get selectionEnd(): number | null {
+    return this.#selectionEnd;
+  }
+
+  get selectionStart(): number | null {
+    return this.#selectionStart;
+  }
+}
 
 function WithEmojiController<H extends SupportedHTMLElement>({
   componentType,
@@ -51,11 +67,7 @@ function WithEmojiController<H extends SupportedHTMLElement>({
   const inputElementRef = useRef<H>(null);
   const onChangeRef = useRefFrom(onChange);
   const placeCheckpointOnChangeRef = useRef<boolean>(false);
-  const prevInputStateRef = useRef<SelectionAndValue>({
-    selectionEnd: Infinity,
-    selectionStart: Infinity,
-    value: value || ''
-  });
+  const prevInputStateRef = useRef<SelectionAndValue>(new SelectionAndValue('', Infinity, Infinity));
   const undoStackRef = useRef<SelectionAndValue[]>([]);
   const valueRef = useRefFrom(value);
 
@@ -65,11 +77,7 @@ function WithEmojiController<H extends SupportedHTMLElement>({
     if (current) {
       const { selectionEnd, selectionStart, value } = current;
 
-      prevInputStateRef.current = {
-        selectionEnd,
-        selectionStart,
-        value
-      };
+      prevInputStateRef.current = new SelectionAndValue(value, selectionStart, selectionEnd);
     }
   }, [inputElementRef, prevInputStateRef]);
 
@@ -93,9 +101,7 @@ function WithEmojiController<H extends SupportedHTMLElement>({
   const handleChange = useCallback<(event: ChangeEvent<H>) => void>(
     ({ currentTarget: { selectionEnd, selectionStart, value } }) => {
       if (placeCheckpointOnChangeRef.current) {
-        const { current } = prevInputStateRef;
-
-        undoStackRef.current.push({ ...current });
+        undoStackRef.current.push(prevInputStateRef.current);
 
         placeCheckpointOnChangeRef.current = false;
       }
@@ -113,11 +119,7 @@ function WithEmojiController<H extends SupportedHTMLElement>({
           const { length } = emoticon;
 
           if (value.slice(selectionEnd - length, selectionEnd) === emoticon) {
-            undoStackRef.current.push({
-              selectionEnd: selectionEnd,
-              selectionStart: selectionStart,
-              value: value
-            });
+            undoStackRef.current.push(new SelectionAndValue(value, selectionStart, selectionEnd));
 
             placeCheckpointOnChangeRef.current = true;
 
@@ -147,11 +149,7 @@ function WithEmojiController<H extends SupportedHTMLElement>({
 
         const poppedInputState = undoStackRef.current.pop();
 
-        if (poppedInputState) {
-          prevInputStateRef.current = { ...poppedInputState };
-        } else {
-          prevInputStateRef.current = { selectionEnd: 0, selectionStart: 0, value: '' };
-        }
+        prevInputStateRef.current = poppedInputState || new SelectionAndValue('', 0, 0);
 
         setSelectionRangeAndValue(
           prevInputStateRef.current.value,
@@ -170,7 +168,7 @@ function WithEmojiController<H extends SupportedHTMLElement>({
         placeCheckpointOnChangeRef.current = true;
       }
 
-      prevInputStateRef.current = { selectionEnd, selectionStart, value };
+      prevInputStateRef.current = new SelectionAndValue(value, selectionStart, selectionEnd);
     },
     [placeCheckpointOnChangeRef, prevInputStateRef]
   );
