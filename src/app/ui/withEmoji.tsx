@@ -10,13 +10,13 @@ import React, {
   useEffect,
   useRef
 } from 'react';
-import { wrapWith } from 'react-wrap-with';
 
 import defaultEmojiSet from './defaultEmojiSet';
+import SelectionAndValue from './private/SelectionAndValue';
 
 type SupportedHTMLElement = HTMLInputElement | HTMLTextAreaElement;
 
-export type RequiredProps<H> = {
+export type InputTargetProps<H> = {
   onChange?: (event: ChangeEvent<H>) => void;
   onFocus?: (event: FocusEvent<H>) => void;
   onKeyDown?: (event: KeyboardEvent<H>) => void;
@@ -26,37 +26,11 @@ export type RequiredProps<H> = {
 };
 
 type WithEmojiProps<H> = {
-  componentType: ComponentType<RequiredProps<H>>;
+  componentType: ComponentType<InputTargetProps<H>>;
   emojiSet?: Map<string, string>;
-  // eslint-disable-next-line react/require-default-props
   onChange?: (value: string) => void;
-  // eslint-disable-next-line react/require-default-props
   value?: string;
 };
-
-class SelectionAndValue {
-  constructor(value: string, selectionStart: number | null, selectionEnd: number | null) {
-    this.#selectionEnd = selectionEnd;
-    this.#selectionStart = selectionStart;
-    this.#value = value;
-  }
-
-  #value: string;
-  #selectionEnd: number | null;
-  #selectionStart: number | null;
-
-  get value(): string {
-    return this.#value;
-  }
-
-  get selectionEnd(): number | null {
-    return this.#selectionEnd;
-  }
-
-  get selectionStart(): number | null {
-    return this.#selectionStart;
-  }
-}
 
 function WithEmojiController<H extends SupportedHTMLElement>({
   componentType,
@@ -173,8 +147,6 @@ function WithEmojiController<H extends SupportedHTMLElement>({
     [placeCheckpointOnChangeRef, prevInputStateRef]
   );
 
-  // This is for TypeFocusSink. When the focus in on the script, then starting press "a", without this line, it would cause errors.
-  // We call rememberInputState() when "onFocus" event is fired, but since this is from TypeFocusSink, we are not able to receive "onFocus" event before it happen.
   useEffect(rememberInputState, [rememberInputState]);
 
   return React.createElement(componentType, {
@@ -190,7 +162,7 @@ function WithEmojiController<H extends SupportedHTMLElement>({
 // TODO: Can we use react-wrap-with?
 export default function withEmoji<
   H extends SupportedHTMLElement,
-  T extends ComponentType<RequiredProps<H>> = ComponentType<RequiredProps<H>>
+  T extends ComponentType<InputTargetProps<H>> = ComponentType<InputTargetProps<H>>
 >(componentType: T): ComponentType<Omit<WithEmojiProps<H>, 'componentType'>> {
   const WithEmoji = ({ onChange, emojiSet, value }: Omit<WithEmojiProps<H>, 'componentType'>) => (
     <WithEmojiController<H> componentType={componentType} emojiSet={emojiSet} onChange={onChange} value={value} />

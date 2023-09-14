@@ -1,9 +1,9 @@
 import { type ChangeEvent, forwardRef, memo, useCallback, useState } from 'react';
-import { Input } from '@fluentui/react-components';
+import { Input, Textarea } from '@fluentui/react-components';
 
-import withEmoji, { type RequiredProps } from './withEmoji';
+import withEmoji, { type InputTargetProps } from './withEmoji';
 
-const TextInput = forwardRef<HTMLInputElement | null, RequiredProps<HTMLInputElement>>(
+const TextInput = forwardRef<HTMLInputElement | null, InputTargetProps<HTMLInputElement>>(
   // eslint-disable-next-line react/prop-types
   ({ onChange, onFocus, onKeyDown, onSelect, value }, ref) => (
     <input
@@ -17,9 +17,19 @@ const TextInput = forwardRef<HTMLInputElement | null, RequiredProps<HTMLInputEle
     />
   )
 );
+
 TextInput.displayName = 'TextInput';
 
-const FluentInput = forwardRef<HTMLInputElement | null, RequiredProps<HTMLInputElement>>(
+const TextArea = forwardRef<HTMLTextAreaElement | null, InputTargetProps<HTMLTextAreaElement>>(
+  // eslint-disable-next-line react/prop-types
+  ({ onChange, onFocus, onKeyDown, onSelect, value }, ref) => (
+    <textarea onChange={onChange} onFocus={onFocus} onKeyDown={onKeyDown} onSelect={onSelect} ref={ref} value={value} />
+  )
+);
+
+TextArea.displayName = 'TextArea';
+
+const FluentInput = forwardRef<HTMLInputElement | null, InputTargetProps<HTMLInputElement>>(
   // eslint-disable-next-line react/prop-types
   ({ onChange, onFocus, onKeyDown, onSelect, value }, ref) => {
     const handleChange = useCallback((event: ChangeEvent<HTMLInputElement>) => onChange?.(event), [onChange]);
@@ -38,19 +48,46 @@ const FluentInput = forwardRef<HTMLInputElement | null, RequiredProps<HTMLInputE
   }
 );
 
+const FluentTextArea = forwardRef<HTMLTextAreaElement | null, InputTargetProps<HTMLTextAreaElement>>(
+  // eslint-disable-next-line react/prop-types
+  ({ onChange, onFocus, onKeyDown, onSelect, value }, ref) => {
+    const handleChange = useCallback((event: ChangeEvent<HTMLTextAreaElement>) => onChange?.(event), [onChange]);
+
+    return (
+      <Textarea
+        onChange={handleChange}
+        onFocus={onFocus}
+        onKeyDown={onKeyDown}
+        onSelect={onSelect}
+        ref={ref}
+        value={value}
+      />
+    );
+  }
+);
+
 const TextInputWithEmoji = withEmoji<HTMLInputElement>(TextInput);
+const TextAreaWithEmoji = withEmoji<HTMLTextAreaElement>(TextArea);
 
 const FluentInputWithEmoji = withEmoji<HTMLInputElement>(FluentInput);
+const FluentTextAreaWithEmoji = withEmoji<HTMLTextAreaElement>(FluentTextArea);
 
 export default memo(function App() {
-  const [value, setValue] = useState<string>('');
-  const handleChange = useCallback((value: string) => setValue(value), [setValue]);
+  const [inputValue, setInputValue] = useState<string>('');
+  const [textAreaValue, setTextAreaValue] = useState<string>('');
+
+  const handleInputChange = useCallback((value: string) => setInputValue(value), [setInputValue]);
+  const handleTextAreaChange = useCallback((value: string) => setTextAreaValue(value), [setTextAreaValue]);
 
   return (
     <p>
       <h1>Hello, World!</h1>
-      <FluentInputWithEmoji onChange={handleChange} value={value} />
-      <TextInputWithEmoji onChange={handleChange} value={value} />
+      <hr />
+      <FluentInputWithEmoji onChange={handleInputChange} value={inputValue} />
+      <TextInputWithEmoji onChange={handleInputChange} value={inputValue} />
+      <hr />
+      <FluentTextAreaWithEmoji onChange={handleTextAreaChange} value={textAreaValue} />
+      <TextAreaWithEmoji onChange={handleTextAreaChange} value={textAreaValue} />
     </p>
   );
 });
