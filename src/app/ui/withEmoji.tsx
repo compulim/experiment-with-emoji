@@ -11,6 +11,7 @@ import React, {
 } from 'react';
 
 import useReplaceEmoticon from './useReplaceEmoticon';
+import { useRefFrom } from 'use-ref-from';
 
 type SupportedHTMLElement = HTMLInputElement | HTMLTextAreaElement;
 
@@ -26,7 +27,7 @@ export type RequiredProps<H> = {
 type WithEmojiProps<H> = {
   componentType: ComponentType<RequiredProps<H>>;
   // eslint-disable-next-line react/require-default-props
-  onChange?: (_: unknown, value: string) => void;
+  onChange?: (value: string) => void;
   // eslint-disable-next-line react/require-default-props
   value?: string;
 };
@@ -42,6 +43,7 @@ type SelectionAndValue = SelectionRange & {
 
 function WithEmojiController<H extends SupportedHTMLElement>({ componentType, onChange, value }: WithEmojiProps<H>) {
   const inputElementRef = useRef<H>(null);
+  const onChangeRef = useRefFrom(onChange);
   const placeCheckpointOnChangeRef = useRef<boolean>(false);
   const prevInputStateRef = useRef<SelectionAndValue>();
   const replaceEmoticon = useReplaceEmoticon();
@@ -73,9 +75,9 @@ function WithEmojiController<H extends SupportedHTMLElement>({ componentType, on
         inputElementRef.current.selectionEnd = selectionEnd;
       }
 
-      onChange?.(undefined, value);
+      onChangeRef.current?.(value);
     },
-    [inputElementRef, onChange]
+    [inputElementRef, onChangeRef]
   );
 
   const setTextBoxValue = useCallback<(selctionAndValue: SelectionAndValue) => SelectionAndValue>(
@@ -102,7 +104,7 @@ function WithEmojiController<H extends SupportedHTMLElement>({ componentType, on
         value: nextValue
       });
 
-      onChange?.(undefined, nextValue);
+      onChangeRef.current?.(nextValue);
 
       return {
         selectionEnd: nextSelectionEnd,
@@ -110,7 +112,7 @@ function WithEmojiController<H extends SupportedHTMLElement>({ componentType, on
         value: nextValue
       };
     },
-    [onChange, replaceEmoticon, setSelectionRangeAndValue, value]
+    [onChangeRef, replaceEmoticon, setSelectionRangeAndValue, value]
   );
 
   const handleChange = useCallback<(event: ChangeEvent<H>) => void>(

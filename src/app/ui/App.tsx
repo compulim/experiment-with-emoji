@@ -25,7 +25,7 @@ const FluentInputWithEmoji = withEmoji<HTMLInputElement>(Input);
 
 export default memo(function App() {
   const [value, setValue] = useState<string>('');
-  const handleChange = useCallback((_: unknown, value: string) => setValue(value), [setValue]);
+  const handleChange = useCallback((value: string) => setValue(value), [setValue]);
 
   return (
     <p>

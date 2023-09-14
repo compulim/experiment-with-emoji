@@ -21,7 +21,8 @@
   "dependencies": {
     "@fluentui/react-components": "^9.31.0",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "use-ref-from": "^0.0.2"
   },
   "devDependencies": {
     "@types/react": "^18.2.21",
