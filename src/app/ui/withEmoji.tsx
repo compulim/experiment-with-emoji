@@ -1,3 +1,4 @@
+import { useRefFrom } from 'use-ref-from';
 import React, {
   type ChangeEvent,
   type ComponentType,
@@ -10,8 +11,7 @@ import React, {
   useRef
 } from 'react';
 
-import useReplaceEmoticon from './useReplaceEmoticon';
-import { useRefFrom } from 'use-ref-from';
+import defaultEmojiSet from './defaultEmojiSet';
 
 type SupportedHTMLElement = HTMLInputElement | HTMLTextAreaElement;
 
@@ -26,6 +26,7 @@ export type RequiredProps<H> = {
 
 type WithEmojiProps<H> = {
   componentType: ComponentType<RequiredProps<H>>;
+  emojiSet?: Map<string, string>;
   // eslint-disable-next-line react/require-default-props
   onChange?: (value: string) => void;
   // eslint-disable-next-line react/require-default-props
@@ -41,7 +42,12 @@ type SelectionAndValue = SelectionRange & {
   value: string;
 };
 
-function WithEmojiController<H extends SupportedHTMLElement>({ componentType, onChange, value }: WithEmojiProps<H>) {
+function WithEmojiController<H extends SupportedHTMLElement>({
+  componentType,
+  emojiSet = defaultEmojiSet,
+  onChange,
+  value = ''
+}: WithEmojiProps<H>) {
   const inputElementRef = useRef<H>(null);
   const onChangeRef = useRefFrom(onChange);
   const placeCheckpointOnChangeRef = useRef<boolean>(false);
@@ -50,8 +56,8 @@ function WithEmojiController<H extends SupportedHTMLElement>({ componentType, on
     selectionStart: Infinity,
     value: value || ''
   });
-  const replaceEmoticon = useReplaceEmoticon();
   const undoStackRef = useRef<SelectionAndValue[]>([]);
+  const valueRef = useRefFrom(value);
 
   const rememberInputState = useCallback(() => {
     const { current } = inputElementRef;
@@ -84,37 +90,6 @@ function WithEmojiController<H extends SupportedHTMLElement>({ componentType, on
     [inputElementRef, onChangeRef]
   );
 
-  const setTextBoxValue = useCallback<(selctionAndValue: SelectionAndValue) => SelectionAndValue>(
-    ({ selectionEnd: nextSelectionEnd, selectionStart: nextSelectionStart, value: nextValue }: SelectionAndValue) => {
-      // Currently, we cannot detect whether the change is due to clipboard paste or pressing a key on the keyboard.
-      // We should not change to emoji when the user is pasting text.
-      // We would assume, for a single character addition, the user must be pressing a key.
-
-      if (nextValue.length === (value || '').length + 1) {
-        ({
-          selectionEnd: nextSelectionEnd,
-          selectionStart: nextSelectionStart,
-          value: nextValue
-        } = replaceEmoticon({
-          selectionEnd: nextSelectionEnd || 0,
-          selectionStart: nextSelectionStart || 0,
-          value: nextValue
-        }));
-      }
-
-      setSelectionRangeAndValue(nextValue, nextSelectionStart, nextSelectionEnd);
-
-      onChangeRef.current?.(nextValue);
-
-      return {
-        selectionEnd: nextSelectionEnd,
-        selectionStart: nextSelectionStart,
-        value: nextValue
-      };
-    },
-    [onChangeRef, replaceEmoticon, setSelectionRangeAndValue, value]
-  );
-
   const handleChange = useCallback<(event: ChangeEvent<H>) => void>(
     ({ currentTarget: { selectionEnd, selectionStart, value } }) => {
       if (placeCheckpointOnChangeRef.current) {
@@ -125,18 +100,36 @@ function WithEmojiController<H extends SupportedHTMLElement>({ componentType, on
         placeCheckpointOnChangeRef.current = false;
       }
 
-      const nextInputState = setTextBoxValue({ selectionEnd, selectionStart, value });
+      // Currently, we cannot detect whether the change is due to clipboard paste or pressing a key on the keyboard.
+      // We should not change to emoji when the user is pasting text.
+      // We would assume, for a single character addition, the user must be pressing a key.
+      if (
+        typeof selectionEnd === 'number' &&
+        typeof selectionStart === 'number' &&
+        selectionStart === selectionEnd &&
+        value.length === (valueRef.current || '').length + 1
+      ) {
+        for (const [emoticon, emoji] of emojiSet.entries()) {
+          const { length } = emoticon;
 
-      // If an emoticon is converted to emoji, place another checkpoint.
-      if (nextInputState.value !== value) {
-        undoStackRef.current.push({ selectionEnd, selectionStart, value });
+          if (value.slice(selectionEnd - length, selectionEnd) === emoticon) {
+            undoStackRef.current.push({
+              selectionEnd: selectionEnd,
+              selectionStart: selectionStart,
+              value: value
+            });
 
-        placeCheckpointOnChangeRef.current = true;
+            placeCheckpointOnChangeRef.current = true;
 
-        setSelectionRangeAndValue(nextInputState.value, nextInputState.selectionEnd, nextInputState.selectionStart);
+            value = `${value.slice(0, selectionEnd - length)}${emoji}${value.slice(selectionEnd)}`;
+            selectionEnd = selectionEnd += emoji.length - length;
+          }
+        }
       }
+
+      setSelectionRangeAndValue(value, selectionStart, selectionEnd);
     },
-    [placeCheckpointOnChangeRef, prevInputStateRef, setSelectionRangeAndValue, setTextBoxValue, undoStackRef]
+    [placeCheckpointOnChangeRef, prevInputStateRef, setSelectionRangeAndValue, undoStackRef, valueRef]
   );
 
   const handleFocus = useCallback(() => {
@@ -201,8 +194,8 @@ export default function withEmoji<
   H extends SupportedHTMLElement,
   T extends ComponentType<RequiredProps<H>> = ComponentType<RequiredProps<H>>
 >(componentType: T): ComponentType<Omit<WithEmojiProps<H>, 'componentType'>> {
-  const WithEmoji = ({ onChange, value }: Omit<WithEmojiProps<H>, 'componentType'>) => (
-    <WithEmojiController<H> componentType={componentType} onChange={onChange} value={value} />
+  const WithEmoji = ({ onChange, emojiSet, value }: Omit<WithEmojiProps<H>, 'componentType'>) => (
+    <WithEmojiController<H> componentType={componentType} emojiSet={emojiSet} onChange={onChange} value={value} />
   );
 
   WithEmoji.displayName = `WithEmoji<${componentType.displayName}>`;
