@@ -17,45 +17,32 @@ import SelectionAndValue from './private/SelectionAndValue';
 type SupportedHTMLElement = HTMLInputElement | HTMLTextAreaElement;
 
 export type InputTargetProps<H> = {
-  disabled?: boolean;
-  onBlur?: (event: FocusEvent<H>) => void;
   onChange?: (event: ChangeEvent<H>) => void;
-  onFocus: (event: FocusEvent<H>) => void;
+  onFocus?: (event: FocusEvent<H>) => void;
   onKeyDown?: (event: KeyboardEvent<H>) => void;
   onSelect?: (event: SyntheticEvent<H>) => void;
-  readOnly?: boolean;
-  ref: Ref<H | null>;
+  ref?: Ref<H | null>;
   value?: string;
 };
 
-type WithEmojiProps<H> = {
-  componentType: ComponentType<InputTargetProps<H>>;
-  disabled?: boolean;
+type WithEmojiControllerProps<H extends SupportedHTMLElement, P extends InputTargetProps<H>> = {
+  componentProps: P;
+  componentType: ComponentType<P>;
   emojiSet?: Map<string, string>;
-  onBlur?: (event: FocusEvent<H>) => void;
   onChange?: (value: string) => void;
-  onFocus?: (event: FocusEvent<H>) => void;
-  readOnly?: boolean;
-  value?: string;
 };
 
-function WithEmojiController<H extends SupportedHTMLElement>({
+function WithEmojiController<H extends SupportedHTMLElement, P extends InputTargetProps<H>>({
+  componentProps,
   componentType,
-  disabled,
   emojiSet = defaultEmojiSet,
-  onBlur,
-  onChange,
-  onFocus,
-  readOnly,
-  value = ''
-}: WithEmojiProps<H>) {
+  onChange
+}: WithEmojiControllerProps<H, P>) {
   const inputElementRef = useRef<H>(null);
-  const onChangeRef = useRefFrom(onChange);
-  const onFocusRef = useRefFrom(onFocus);
   const placeCheckpointOnChangeRef = useRef<boolean>(false);
   const prevInputStateRef = useRef<SelectionAndValue>(new SelectionAndValue('', Infinity, Infinity));
   const undoStackRef = useRef<SelectionAndValue[]>([]);
-  const valueRef = useRefFrom(value);
+  const valueRef = useRefFrom(componentProps.value);
 
   const rememberInputState = useCallback(() => {
     const { current } = inputElementRef;
@@ -71,17 +58,19 @@ function WithEmojiController<H extends SupportedHTMLElement>({
   // If we only use setSendBox, we will need to wait for the next render cycle to get the value in, before we can set selectionEnd/Start.
   const setSelectionRangeAndValue = useCallback(
     (value: string, selectionStart: number | null, selectionEnd: number | null) => {
-      if (inputElementRef.current) {
-        // We need to set the value, before selectionStart/selectionEnd.
-        inputElementRef.current.value = value;
+      const { current } = inputElementRef;
 
-        inputElementRef.current.selectionStart = selectionStart;
-        inputElementRef.current.selectionEnd = selectionEnd;
+      if (current) {
+        // We need to set the value, before selectionStart/selectionEnd.
+        current.value = value;
+
+        current.selectionStart = selectionStart;
+        current.selectionEnd = selectionEnd;
       }
 
-      onChangeRef.current?.(value);
+      onChange?.(value);
     },
-    [inputElementRef, onChangeRef]
+    [inputElementRef, onChange]
   );
 
   const handleChange = useCallback<(event: ChangeEvent<H>) => void>(
@@ -120,16 +109,11 @@ function WithEmojiController<H extends SupportedHTMLElement>({
     [placeCheckpointOnChangeRef, prevInputStateRef, setSelectionRangeAndValue, undoStackRef, valueRef]
   );
 
-  const handleFocus = useCallback<(event: FocusEvent<H>) => void>(
-    event => {
-      onFocusRef.current?.(event);
+  const handleFocus = useCallback<(event: FocusEvent<H>) => void>(() => {
+    rememberInputState();
 
-      rememberInputState();
-
-      placeCheckpointOnChangeRef.current = true;
-    },
-    [onFocusRef, placeCheckpointOnChangeRef, rememberInputState]
-  );
+    placeCheckpointOnChangeRef.current = true;
+  }, [placeCheckpointOnChangeRef, rememberInputState]);
 
   const handleKeyDown = useCallback<(event: KeyboardEvent<H>) => void>(
     event => {
@@ -166,42 +150,36 @@ function WithEmojiController<H extends SupportedHTMLElement>({
 
   useEffect(rememberInputState, [rememberInputState]);
 
+  console.log('props', {
+    componentProps
+  });
+
   return React.createElement(componentType, {
-    disabled,
-    onBlur,
+    ...componentProps,
     onChange: handleChange,
     onFocus: handleFocus,
     onKeyDown: handleKeyDown,
     onSelect: handleSelect,
-    readOnly,
-    ref: inputElementRef,
-    value: value || ''
+    ref: inputElementRef
   });
 }
 
-// TODO: Can we use react-wrap-with?
 export default function withEmoji<
   H extends SupportedHTMLElement,
-  T extends ComponentType<InputTargetProps<H>> = ComponentType<InputTargetProps<H>>
->(componentType: T): ComponentType<Omit<WithEmojiProps<H>, 'componentType'>> {
+  // TODO: Can we infer P from T and also make sure P extends InputTargetProps<H>?
+  P extends InputTargetProps<H> = InputTargetProps<H>,
+  T extends ComponentType<P> = ComponentType<P>
+>(componentType: T) {
   const WithEmoji = ({
-    disabled,
-    emojiSet,
-    onBlur,
+    emojiSet = defaultEmojiSet,
     onChange,
-    onFocus,
-    readOnly,
-    value
-  }: Omit<WithEmojiProps<H>, 'componentType'>) => (
-    <WithEmojiController<H>
+    ...props
+  }: Omit<P, 'onChange'> & { emojiSet?: Map<string, string>; onChange?: (value: string) => void }) => (
+    <WithEmojiController<H, P>
+      componentProps={props as P}
       componentType={componentType}
-      disabled={disabled}
       emojiSet={emojiSet}
-      onBlur={onBlur}
       onChange={onChange}
-      onFocus={onFocus}
-      readOnly={readOnly}
-      value={value}
     />
   );
 

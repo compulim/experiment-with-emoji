@@ -1,5 +1,6 @@
-import { type ChangeEvent, forwardRef, memo, useCallback, useState } from 'react';
+import { type ChangeEvent, type ComponentType, forwardRef, memo, useCallback, useState } from 'react';
 import { Input, Textarea } from '@fluentui/react-components';
+import { useRefFrom } from 'use-ref-from';
 
 import withEmoji, { type InputTargetProps } from './withEmoji';
 
@@ -50,31 +51,36 @@ const FluentInput = forwardRef<HTMLInputElement | null, InputTargetProps<HTMLInp
 
 FluentInput.displayName = 'FluentInput';
 
-const FluentTextArea = forwardRef<HTMLTextAreaElement | null, InputTargetProps<HTMLTextAreaElement>>(
+const FluentTextArea = forwardRef<
+  HTMLTextAreaElement,
+  Omit<PropsOf<typeof Textarea>, 'onChange'> & { onChange?: (event: ChangeEvent<HTMLTextAreaElement>) => void }
+>(
   // eslint-disable-next-line react/prop-types
-  ({ onChange, onFocus, onKeyDown, onSelect, value }, ref) => {
-    const handleChange = useCallback((event: ChangeEvent<HTMLTextAreaElement>) => onChange?.(event), [onChange]);
-
-    return (
-      <Textarea
-        onChange={handleChange}
-        onFocus={onFocus}
-        onKeyDown={onKeyDown}
-        onSelect={onSelect}
-        ref={ref}
-        value={value}
-      />
+  (props, ref) => {
+    const onChangeRef = useRefFrom(props.onChange);
+    const handleChange = useCallback(
+      (event: ChangeEvent<HTMLTextAreaElement>) => onChangeRef.current?.(event),
+      [onChangeRef]
     );
+
+    return <Textarea {...props} onChange={handleChange} ref={ref} />;
   }
 );
 
 FluentTextArea.displayName = 'FluentTextArea';
 
+type PropsOf<T extends ComponentType> = T extends ComponentType<infer P> ? P : never;
+
 const TextInputWithEmoji = withEmoji<HTMLInputElement>(TextInput);
 const TextAreaWithEmoji = withEmoji<HTMLTextAreaElement>(TextArea);
 
 const FluentInputWithEmoji = withEmoji<HTMLInputElement>(FluentInput);
-const FluentTextAreaWithEmoji = withEmoji<HTMLTextAreaElement>(FluentTextArea);
+const FluentTextAreaWithEmoji = withEmoji<
+  HTMLTextAreaElement,
+  Omit<PropsOf<typeof Textarea>, 'onChange'> & {
+    onChange?: (event: ChangeEvent<HTMLTextAreaElement>) => void;
+  }
+>(FluentTextArea);
 
 export default memo(function App() {
   const [inputValue, setInputValue] = useState<string>('');
@@ -90,7 +96,12 @@ export default memo(function App() {
       <FluentInputWithEmoji onChange={handleInputChange} value={inputValue} />
       <TextInputWithEmoji onChange={handleInputChange} value={inputValue} />
       <hr />
-      <FluentTextAreaWithEmoji onChange={handleTextAreaChange} value={textAreaValue} />
+      <FluentTextAreaWithEmoji
+        aria-label="Hello"
+        disabled={true}
+        onChange={handleTextAreaChange}
+        value={textAreaValue}
+      />
       <TextAreaWithEmoji onChange={handleTextAreaChange} value={textAreaValue} />
     </p>
   );
