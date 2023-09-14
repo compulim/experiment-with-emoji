@@ -48,6 +48,8 @@ const FluentInput = forwardRef<HTMLInputElement | null, InputTargetProps<HTMLInp
   }
 );
 
+FluentInput.displayName = 'FluentInput';
+
 const FluentTextArea = forwardRef<HTMLTextAreaElement | null, InputTargetProps<HTMLTextAreaElement>>(
   // eslint-disable-next-line react/prop-types
   ({ onChange, onFocus, onKeyDown, onSelect, value }, ref) => {
@@ -65,6 +67,8 @@ const FluentTextArea = forwardRef<HTMLTextAreaElement | null, InputTargetProps<H
     );
   }
 );
+
+FluentTextArea.displayName = 'FluentTextArea';
 
 const TextInputWithEmoji = withEmoji<HTMLInputElement>(TextInput);
 const TextAreaWithEmoji = withEmoji<HTMLTextAreaElement>(TextArea);
