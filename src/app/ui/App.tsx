@@ -6,26 +6,14 @@ import withEmoji, { type InputTargetProps } from './withEmoji';
 
 const TextInput = forwardRef<HTMLInputElement | null, InputTargetProps<HTMLInputElement>>(
   // eslint-disable-next-line react/prop-types
-  ({ onChange, onFocus, onKeyDown, onSelect, value }, ref) => (
-    <input
-      onChange={onChange}
-      onFocus={onFocus}
-      onKeyDown={onKeyDown}
-      onSelect={onSelect}
-      ref={ref}
-      type="text"
-      value={value}
-    />
-  )
+  (props, ref) => <input ref={ref} {...props} />
 );
 
 TextInput.displayName = 'TextInput';
 
 const TextArea = forwardRef<HTMLTextAreaElement | null, InputTargetProps<HTMLTextAreaElement>>(
   // eslint-disable-next-line react/prop-types
-  ({ onChange, onFocus, onKeyDown, onSelect, value }, ref) => (
-    <textarea onChange={onChange} onFocus={onFocus} onKeyDown={onKeyDown} onSelect={onSelect} ref={ref} value={value} />
-  )
+  (props, ref) => <textarea ref={ref} {...props} />
 );
 
 TextArea.displayName = 'TextArea';

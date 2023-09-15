@@ -5,7 +5,6 @@ import React, {
   type FocusEvent,
   type KeyboardEvent,
   type SyntheticEvent,
-  type Ref,
   useCallback,
   useEffect,
   useRef
@@ -19,7 +18,6 @@ export type InputTargetProps<H> = {
   onFocus?: (event: FocusEvent<H>) => void;
   onKeyDown?: (event: KeyboardEvent<H>) => void;
   onSelect?: (event: SyntheticEvent<H>) => void;
-  ref?: Ref<H | null>;
   value?: string;
 };
 
