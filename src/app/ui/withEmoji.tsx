@@ -23,29 +23,18 @@ export type InputTargetProps<H> = {
   value?: string;
 };
 
-type ComponentTypeOfInputTarget<P> = P extends InputTargetProps<infer H> ? H : never;
-
-type SupportedHTMLElements = {
-  selectionEnd?: HTMLInputElement['selectionEnd'];
-  selectionStart?: HTMLInputElement['selectionStart'];
-  value?: HTMLInputElement['value'];
-};
-
-type WithEmojiControllerProps<P extends InputTargetProps<SupportedHTMLElements>> = {
-  componentProps: P;
-  componentType: ComponentType<P>;
-  emojiSet?: Map<string, string>;
-  onChange?: (value: string | undefined) => void;
-};
-
-function WithEmojiController<P extends InputTargetProps<SupportedHTMLElements>>({
+function WithEmojiController<P extends InputTargetProps<HTMLInputElement> | InputTargetProps<HTMLTextAreaElement>>({
   componentProps,
   componentType,
   emojiSet = defaultEmojiSet,
   onChange
-}: WithEmojiControllerProps<P>) {
-  type H = ComponentTypeOfInputTarget<P>;
-  // type H = { selectionEnd: number | null; selectionStart: number | null; value: string };
+}: {
+  componentProps: P;
+  componentType: ComponentType<P>;
+  emojiSet?: Map<string, string>;
+  onChange?: (value: string | undefined) => void;
+}) {
+  type H = P extends InputTargetProps<infer H> ? H : never;
 
   const inputElementRef = useRef<H>(null);
   const placeCheckpointOnChangeRef = useRef<boolean>(false);
@@ -66,7 +55,7 @@ function WithEmojiController<P extends InputTargetProps<SupportedHTMLElements>>(
   // This is for moving the selection while setting the send box value.
   // If we only use setSendBox, we will need to wait for the next render cycle to get the value in, before we can set selectionEnd/Start.
   const setSelectionRangeAndValue = useCallback(
-    (value: string | undefined, selectionStart: number | null | undefined, selectionEnd: number | null | undefined) => {
+    (value: string, selectionStart: number | null, selectionEnd: number | null) => {
       const { current } = inputElementRef;
 
       if (current) {
@@ -146,8 +135,12 @@ function WithEmojiController<P extends InputTargetProps<SupportedHTMLElements>>(
     [prevInputStateRef, setSelectionRangeAndValue, undoStackRef]
   );
 
-  const handleSelect = useCallback<(event: SyntheticEvent<H>) => void>(
-    ({ currentTarget: { selectionEnd, selectionStart, value } }) => {
+  const handleSelect = useCallback(
+    (event: SyntheticEvent<H>): void => {
+      const {
+        currentTarget: { selectionEnd, selectionStart, value }
+      } = event;
+
       if (value === prevInputStateRef.current.value) {
         // When caret move, we should push to undo stack on change.
         placeCheckpointOnChangeRef.current = true;
@@ -167,10 +160,12 @@ function WithEmojiController<P extends InputTargetProps<SupportedHTMLElements>>(
     onKeyDown: handleKeyDown,
     onSelect: handleSelect,
     ref: inputElementRef
-  });
+  } as P);
 }
 
-export default function withEmoji<P extends InputTargetProps<SupportedHTMLElements>>(componentType: ComponentType<P>) {
+export default function withEmoji<P extends InputTargetProps<HTMLInputElement> | InputTargetProps<HTMLTextAreaElement>>(
+  componentType: ComponentType<P>
+) {
   const WithEmoji = ({
     emojiSet = defaultEmojiSet,
     onChange,

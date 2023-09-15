@@ -1,27 +1,23 @@
 export default class SelectionAndValue {
-  constructor(
-    value: string | undefined,
-    selectionStart: number | null | undefined,
-    selectionEnd: number | null | undefined
-  ) {
+  constructor(value: string, selectionStart: number | null, selectionEnd: number | null) {
     this.#selectionEnd = selectionEnd;
     this.#selectionStart = selectionStart;
     this.#value = value;
   }
 
-  #value: string | undefined;
-  #selectionEnd: number | null | undefined;
-  #selectionStart: number | null | undefined;
+  #value: string;
+  #selectionEnd: number | null;
+  #selectionStart: number | null;
 
-  get value(): string | undefined {
+  get value(): string {
     return this.#value;
   }
 
-  get selectionEnd(): number | null | undefined {
+  get selectionEnd(): number | null {
     return this.#selectionEnd;
   }
 
-  get selectionStart(): number | null | undefined {
+  get selectionStart(): number | null {
     return this.#selectionStart;
   }
 }

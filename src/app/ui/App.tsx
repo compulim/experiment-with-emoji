@@ -84,8 +84,11 @@ export default memo(function App() {
   const [inputValue, setInputValue] = useState<string>('');
   const [textAreaValue, setTextAreaValue] = useState<string>('');
 
-  const handleInputChange = useCallback((value: string) => setInputValue(value), [setInputValue]);
-  const handleTextAreaChange = useCallback((value: string) => setTextAreaValue(value), [setTextAreaValue]);
+  const handleInputChange = useCallback((value: string | undefined) => setInputValue(value || ''), [setInputValue]);
+  const handleTextAreaChange = useCallback(
+    (value: string | undefined) => setTextAreaValue(value || ''),
+    [setTextAreaValue]
+  );
 
   return (
     <p>
