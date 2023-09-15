@@ -25,20 +25,27 @@ export type InputTargetProps<H> = {
 
 type ComponentTypeOfInputTarget<P> = P extends InputTargetProps<infer H> ? H : never;
 
-type WithEmojiControllerProps<P extends InputTargetProps<HTMLInputElement> | InputTargetProps<HTMLTextAreaElement>> = {
+type SupportedHTMLElements = {
+  selectionEnd?: HTMLInputElement['selectionEnd'];
+  selectionStart?: HTMLInputElement['selectionStart'];
+  value?: HTMLInputElement['value'];
+};
+
+type WithEmojiControllerProps<P extends InputTargetProps<SupportedHTMLElements>> = {
   componentProps: P;
   componentType: ComponentType<P>;
   emojiSet?: Map<string, string>;
-  onChange?: (value: string) => void;
+  onChange?: (value: string | undefined) => void;
 };
 
-function WithEmojiController<P extends InputTargetProps<HTMLInputElement> | InputTargetProps<HTMLTextAreaElement>>({
+function WithEmojiController<P extends InputTargetProps<SupportedHTMLElements>>({
   componentProps,
   componentType,
   emojiSet = defaultEmojiSet,
   onChange
 }: WithEmojiControllerProps<P>) {
   type H = ComponentTypeOfInputTarget<P>;
+  // type H = { selectionEnd: number | null; selectionStart: number | null; value: string };
 
   const inputElementRef = useRef<H>(null);
   const placeCheckpointOnChangeRef = useRef<boolean>(false);
@@ -59,7 +66,7 @@ function WithEmojiController<P extends InputTargetProps<HTMLInputElement> | Inpu
   // This is for moving the selection while setting the send box value.
   // If we only use setSendBox, we will need to wait for the next render cycle to get the value in, before we can set selectionEnd/Start.
   const setSelectionRangeAndValue = useCallback(
-    (value: string, selectionStart: number | null, selectionEnd: number | null) => {
+    (value: string | undefined, selectionStart: number | null | undefined, selectionEnd: number | null | undefined) => {
       const { current } = inputElementRef;
 
       if (current) {
@@ -90,6 +97,7 @@ function WithEmojiController<P extends InputTargetProps<HTMLInputElement> | Inpu
         typeof selectionEnd === 'number' &&
         typeof selectionStart === 'number' &&
         selectionStart === selectionEnd &&
+        value &&
         value.length === (valueRef.current || '').length + 1
       ) {
         for (const [emoticon, emoji] of emojiSet.entries()) {
@@ -159,18 +167,15 @@ function WithEmojiController<P extends InputTargetProps<HTMLInputElement> | Inpu
     onKeyDown: handleKeyDown,
     onSelect: handleSelect,
     ref: inputElementRef
-    // TODO: Can we remove this casting?
-  } as P);
+  });
 }
 
-export default function withEmoji<P extends InputTargetProps<HTMLInputElement> | InputTargetProps<HTMLTextAreaElement>>(
-  componentType: ComponentType<P>
-) {
+export default function withEmoji<P extends InputTargetProps<SupportedHTMLElements>>(componentType: ComponentType<P>) {
   const WithEmoji = ({
     emojiSet = defaultEmojiSet,
     onChange,
     ...props
-  }: Omit<P, 'onChange'> & { emojiSet?: Map<string, string>; onChange?: (value: string) => void }) => (
+  }: Omit<P, 'onChange'> & { emojiSet?: Map<string, string>; onChange?: (value: string | undefined) => void }) => (
     <WithEmojiController<P>
       componentProps={props as P}
       componentType={componentType}
