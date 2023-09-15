@@ -30,7 +30,10 @@ const TextArea = forwardRef<HTMLTextAreaElement | null, InputTargetProps<HTMLTex
 
 TextArea.displayName = 'TextArea';
 
-const FluentInput = forwardRef<HTMLInputElement | null, InputTargetProps<HTMLInputElement>>(
+const FluentInput = forwardRef<
+  HTMLInputElement | null,
+  Omit<PropsOf<typeof Input>, 'onChange'> & { onChange: (event: ChangeEvent<HTMLInputElement>) => void }
+>(
   // eslint-disable-next-line react/prop-types
   ({ onChange, onFocus, onKeyDown, onSelect, value }, ref) => {
     const handleChange = useCallback((event: ChangeEvent<HTMLInputElement>) => onChange?.(event), [onChange]);
@@ -71,16 +74,11 @@ FluentTextArea.displayName = 'FluentTextArea';
 
 type PropsOf<T extends ComponentType> = T extends ComponentType<infer P> ? P : never;
 
-const TextInputWithEmoji = withEmoji<HTMLInputElement>(TextInput);
-const TextAreaWithEmoji = withEmoji<HTMLTextAreaElement>(TextArea);
+const TextInputWithEmoji = withEmoji(TextInput);
+const TextAreaWithEmoji = withEmoji(TextArea);
 
-const FluentInputWithEmoji = withEmoji<HTMLInputElement>(FluentInput);
-const FluentTextAreaWithEmoji = withEmoji<
-  HTMLTextAreaElement,
-  Omit<PropsOf<typeof Textarea>, 'onChange'> & {
-    onChange?: (event: ChangeEvent<HTMLTextAreaElement>) => void;
-  }
->(FluentTextArea);
+const FluentInputWithEmoji = withEmoji(FluentInput);
+const FluentTextAreaWithEmoji = withEmoji(FluentTextArea);
 
 export default memo(function App() {
   const [inputValue, setInputValue] = useState<string>('');

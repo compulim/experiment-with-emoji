@@ -14,8 +14,6 @@ import React, {
 import defaultEmojiSet from './defaultEmojiSet';
 import SelectionAndValue from './private/SelectionAndValue';
 
-type SupportedHTMLElement = HTMLInputElement | HTMLTextAreaElement;
-
 export type InputTargetProps<H> = {
   onChange?: (event: ChangeEvent<H>) => void;
   onFocus?: (event: FocusEvent<H>) => void;
@@ -25,19 +23,23 @@ export type InputTargetProps<H> = {
   value?: string;
 };
 
-type WithEmojiControllerProps<H extends SupportedHTMLElement, P extends InputTargetProps<H>> = {
+type ComponentTypeOfInputTarget<P> = P extends InputTargetProps<infer H> ? H : never;
+
+type WithEmojiControllerProps<P extends InputTargetProps<HTMLInputElement> | InputTargetProps<HTMLTextAreaElement>> = {
   componentProps: P;
   componentType: ComponentType<P>;
   emojiSet?: Map<string, string>;
   onChange?: (value: string) => void;
 };
 
-function WithEmojiController<H extends SupportedHTMLElement, P extends InputTargetProps<H>>({
+function WithEmojiController<P extends InputTargetProps<HTMLInputElement> | InputTargetProps<HTMLTextAreaElement>>({
   componentProps,
   componentType,
   emojiSet = defaultEmojiSet,
   onChange
-}: WithEmojiControllerProps<H, P>) {
+}: WithEmojiControllerProps<P>) {
+  type H = ComponentTypeOfInputTarget<P>;
+
   const inputElementRef = useRef<H>(null);
   const placeCheckpointOnChangeRef = useRef<boolean>(false);
   const prevInputStateRef = useRef<SelectionAndValue>(new SelectionAndValue('', Infinity, Infinity));
@@ -150,10 +152,6 @@ function WithEmojiController<H extends SupportedHTMLElement, P extends InputTarg
 
   useEffect(rememberInputState, [rememberInputState]);
 
-  console.log('props', {
-    componentProps
-  });
-
   return React.createElement(componentType, {
     ...componentProps,
     onChange: handleChange,
@@ -161,21 +159,19 @@ function WithEmojiController<H extends SupportedHTMLElement, P extends InputTarg
     onKeyDown: handleKeyDown,
     onSelect: handleSelect,
     ref: inputElementRef
-  });
+    // TODO: Can we remove this casting?
+  } as P);
 }
 
-export default function withEmoji<
-  H extends SupportedHTMLElement,
-  // TODO: Can we infer P from T and also make sure P extends InputTargetProps<H>?
-  P extends InputTargetProps<H> = InputTargetProps<H>,
-  T extends ComponentType<P> = ComponentType<P>
->(componentType: T) {
+export default function withEmoji<P extends InputTargetProps<HTMLInputElement> | InputTargetProps<HTMLTextAreaElement>>(
+  componentType: ComponentType<P>
+) {
   const WithEmoji = ({
     emojiSet = defaultEmojiSet,
     onChange,
     ...props
   }: Omit<P, 'onChange'> & { emojiSet?: Map<string, string>; onChange?: (value: string) => void }) => (
-    <WithEmojiController<H, P>
+    <WithEmojiController<P>
       componentProps={props as P}
       componentType={componentType}
       emojiSet={emojiSet}
