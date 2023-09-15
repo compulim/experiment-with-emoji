@@ -10,7 +10,6 @@ import React, {
   useRef
 } from 'react';
 
-import defaultEmojiMap from './defaultEmojiMap';
 import SelectionAndValue from './private/SelectionAndValue';
 
 export type InputTargetProps<H> = {
@@ -24,14 +23,14 @@ export type InputTargetProps<H> = {
 function WithEmojiController<P extends InputTargetProps<HTMLInputElement> | InputTargetProps<HTMLTextAreaElement>>({
   componentProps,
   componentType,
-  emojiMap = defaultEmojiMap,
+  emojiMap = new Map<string, string>(),
   onChange
-}: {
+}: Readonly<{
   componentProps: P;
   componentType: ComponentType<P>;
   emojiMap?: Map<string, string>;
   onChange?: (value: string | undefined) => void;
-}) {
+}>) {
   type H = P extends InputTargetProps<infer H> ? H : never;
 
   const inputElementRef = useRef<H>(null);
@@ -103,7 +102,7 @@ function WithEmojiController<P extends InputTargetProps<HTMLInputElement> | Inpu
 
       setSelectionRangeAndValue(value, selectionStart, selectionEnd);
     },
-    [placeCheckpointOnChangeRef, prevInputStateRef, setSelectionRangeAndValue, undoStackRef, valueRef]
+    [emojiMap, placeCheckpointOnChangeRef, prevInputStateRef, setSelectionRangeAndValue, undoStackRef, valueRef]
   );
 
   const handleFocus = useCallback<(event: FocusEvent<H>) => void>(() => {
@@ -151,6 +150,12 @@ function WithEmojiController<P extends InputTargetProps<HTMLInputElement> | Inpu
 
   useEffect(rememberInputState, [rememberInputState]);
 
+  // TODO: Fix this:
+  //       1. Type "ABC"
+  //       2. Send props.value as "XYZ"
+  //       3. Press CTRL-Z should revert to "ABC", instead of empty
+  //       Cause: we did not checkpoint when receiving a new props.value.
+
   return React.createElement(componentType, {
     ...componentProps,
     onChange: handleChange,
@@ -168,9 +173,14 @@ export default function withEmoji<P extends InputTargetProps<HTMLInputElement> |
     emojiMap,
     onChange,
     ...props
-  }: Omit<P, 'onChange'> & { emojiMap?: Map<string, string>; onChange?: (value: string | undefined) => void }) => (
+  }: Readonly<
+    Omit<P, 'onChange'> & {
+      emojiMap?: Map<string, string>;
+      onChange?: (value: string | undefined) => void;
+    }
+  >) => (
     <WithEmojiController<P>
-      componentProps={props as P}
+      componentProps={props as unknown as P}
       componentType={componentType}
       emojiMap={emojiMap}
       onChange={onChange}

@@ -10,6 +10,10 @@
     "preserveWatchOutput": true,
     "skipLibCheck": true,
     "strict": true,
-    "target": "ESNext"
-  }
+    "target": "ESNext",
+
+    // TODO: Enable this.
+    "exactOptionalPropertyTypes": false
+  },
+  "extends": "@tsconfig/strictest"
 }

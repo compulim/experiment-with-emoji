@@ -2,6 +2,7 @@ import { type ChangeEvent, type ComponentType, forwardRef, memo, useCallback, us
 import { Input, Textarea } from '@fluentui/react-components';
 import { useRefFrom } from 'use-ref-from';
 
+import defaultEmojiMap from './defaultEmojiMap';
 import withEmoji, { type InputTargetProps } from './withEmoji';
 
 const TextInput = forwardRef<HTMLInputElement | null, InputTargetProps<HTMLInputElement>>(
@@ -82,16 +83,17 @@ export default memo(function App() {
     <p>
       <h1>Hello, World!</h1>
       <hr />
-      <FluentInputWithEmoji onChange={handleInputChange} value={inputValue} />
-      <TextInputWithEmoji onChange={handleInputChange} value={inputValue} />
+      <FluentInputWithEmoji emojiMap={defaultEmojiMap} onChange={handleInputChange} value={inputValue} />
+      <TextInputWithEmoji emojiMap={defaultEmojiMap} onChange={handleInputChange} value={inputValue} />
       <hr />
       <FluentTextAreaWithEmoji
         aria-label="Hello"
         disabled={true}
+        emojiMap={defaultEmojiMap}
         onChange={handleTextAreaChange}
         value={textAreaValue}
       />
-      <TextAreaWithEmoji onChange={handleTextAreaChange} value={textAreaValue} />
+      <TextAreaWithEmoji emojiMap={defaultEmojiMap} onChange={handleTextAreaChange} value={textAreaValue} />
     </p>
   );
 });

@@ -1,4 +1,4 @@
-const defaultEmojiSet = new Map<string, string>([
+const defaultEmojiMap = new Map<string, string>([
   [':)', '😊'],
   [':-)', '😊'],
   ['(:', '😊'],
@@ -26,4 +26,4 @@ const defaultEmojiSet = new Map<string, string>([
   ['<\\3', '💔']
 ]);
 
-export default defaultEmojiSet;
+export default defaultEmojiMap;
