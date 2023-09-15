@@ -10,7 +10,7 @@ import React, {
   useRef
 } from 'react';
 
-import defaultEmojiSet from './defaultEmojiSet';
+import defaultEmojiMap from './defaultEmojiMap';
 import SelectionAndValue from './private/SelectionAndValue';
 
 export type InputTargetProps<H> = {
@@ -24,12 +24,12 @@ export type InputTargetProps<H> = {
 function WithEmojiController<P extends InputTargetProps<HTMLInputElement> | InputTargetProps<HTMLTextAreaElement>>({
   componentProps,
   componentType,
-  emojiSet = defaultEmojiSet,
+  emojiMap = defaultEmojiMap,
   onChange
 }: {
   componentProps: P;
   componentType: ComponentType<P>;
-  emojiSet?: Map<string, string>;
+  emojiMap?: Map<string, string>;
   onChange?: (value: string | undefined) => void;
 }) {
   type H = P extends InputTargetProps<infer H> ? H : never;
@@ -87,7 +87,7 @@ function WithEmojiController<P extends InputTargetProps<HTMLInputElement> | Inpu
         value &&
         value.length === (valueRef.current || '').length + 1
       ) {
-        for (const [emoticon, emoji] of emojiSet.entries()) {
+        for (const [emoticon, emoji] of emojiMap.entries()) {
           const { length } = emoticon;
 
           if (value.slice(selectionEnd - length, selectionEnd) === emoticon) {
@@ -165,14 +165,14 @@ export default function withEmoji<P extends InputTargetProps<HTMLInputElement> |
   componentType: ComponentType<P>
 ) {
   const WithEmoji = ({
-    emojiSet = defaultEmojiSet,
+    emojiMap,
     onChange,
     ...props
-  }: Omit<P, 'onChange'> & { emojiSet?: Map<string, string>; onChange?: (value: string | undefined) => void }) => (
+  }: Omit<P, 'onChange'> & { emojiMap?: Map<string, string>; onChange?: (value: string | undefined) => void }) => (
     <WithEmojiController<P>
       componentProps={props as P}
       componentType={componentType}
-      emojiSet={emojiSet}
+      emojiMap={emojiMap}
       onChange={onChange}
     />
   );
