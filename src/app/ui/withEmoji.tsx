@@ -190,17 +190,15 @@ export default function withEmoji<
         onChange?: (value: string | undefined) => void;
       }
     >
-  >(({ emojiMap, onChange, ...props }, ref) => {
-    return (
-      <WithEmojiController<T, P, H>
-        componentProps={props as P}
-        componentType={componentType}
-        emojiMap={emojiMap}
-        innerRef={ref}
-        onChange={onChange}
-      />
-    );
-  });
+  >(({ emojiMap, onChange, ...props }, ref) => (
+    <WithEmojiController<T, P, H>
+      componentProps={props as P}
+      componentType={componentType}
+      emojiMap={emojiMap}
+      innerRef={ref}
+      onChange={onChange}
+    />
+  ));
 
   WithEmoji.displayName = `WithEmoji<${componentType.displayName}>`;
 
