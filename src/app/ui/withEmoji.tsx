@@ -196,8 +196,8 @@ export default function withEmoji<
         componentProps={props as P}
         componentType={componentType}
         emojiMap={emojiMap}
-        onChange={onChange}
         innerRef={ref}
+        onChange={onChange}
       />
     );
   });
