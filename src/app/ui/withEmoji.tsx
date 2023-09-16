@@ -24,9 +24,9 @@ export type InputTargetProps<H> = {
 };
 
 function WithEmojiController<
-  H extends HTMLInputElement | HTMLTextAreaElement,
-  T extends ComponentType,
-  P extends InputTargetProps<H> = PropsOf<T>
+  T extends ComponentType<P>,
+  P extends InputTargetProps<H> = PropsOf<T>,
+  H extends HTMLInputElement | HTMLTextAreaElement = P extends InputTargetProps<infer H> ? H : never
 >({
   componentProps,
   componentType,
@@ -175,41 +175,13 @@ function WithEmojiController<
   } as P);
 }
 
-type PropsOf<T extends ComponentType> = T extends ComponentType<infer P> ? P : never;
-
-export function withEmojiWithInput<T extends ComponentType, P extends InputTargetProps<HTMLInputElement> = PropsOf<T>>(
-  componentType: ComponentType<P>
-) {
-  const WithEmoji = forwardRef<
-    HTMLInputElement,
-    Readonly<
-      Omit<P, 'emojiMap' | 'onChange'> & {
-        emojiMap?: Map<string, string>;
-        onChange?: (value: string | undefined) => void;
-      }
-    >
-  >(({ emojiMap, onChange, ...props }, ref) => {
-    return (
-      <WithEmojiController<HTMLInputElement, T, P>
-        componentProps={props as P}
-        componentType={componentType}
-        emojiMap={emojiMap}
-        onChange={onChange}
-        innerRef={ref}
-      />
-    );
-  });
-
-  WithEmoji.displayName = `WithEmoji<${componentType.displayName}>`;
-
-  return WithEmoji;
-}
+type PropsOf<T> = T extends ComponentType<infer P> ? P : never;
 
 export default function withEmoji<
-  H extends HTMLInputElement | HTMLTextAreaElement,
-  T extends ComponentType = ComponentType,
-  P extends InputTargetProps<H> = PropsOf<T>
->(componentType: ComponentType<P>) {
+  T extends ComponentType<P>,
+  P extends InputTargetProps<H> = PropsOf<T>,
+  H extends HTMLInputElement | HTMLTextAreaElement = P extends InputTargetProps<infer H> ? H : never
+>(componentType: T) {
   const WithEmoji = forwardRef<
     H,
     Readonly<
@@ -220,7 +192,7 @@ export default function withEmoji<
     >
   >(({ emojiMap, onChange, ...props }, ref) => {
     return (
-      <WithEmojiController<H, T, P>
+      <WithEmojiController<T, P, H>
         componentProps={props as P}
         componentType={componentType}
         emojiMap={emojiMap}

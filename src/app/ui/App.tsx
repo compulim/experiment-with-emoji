@@ -72,11 +72,11 @@ FluentTextArea.displayName = 'FluentTextArea';
 
 type PropsOf<T extends ComponentType> = T extends ComponentType<infer P> ? P : never;
 
-const TextInputWithEmoji = withEmoji<HTMLInputElement, typeof TextInput>(TextInput);
-const TextAreaWithEmoji = withEmoji<HTMLTextAreaElement, typeof TextArea>(TextArea);
+const TextInputWithEmoji = withEmoji(TextInput);
+const TextAreaWithEmoji = withEmoji(TextArea);
 
-const FluentInputWithEmoji = withEmoji<HTMLInputElement, typeof FluentInput>(FluentInput);
-const FluentTextAreaWithEmoji = withEmoji<HTMLTextAreaElement, typeof FluentTextArea>(FluentTextArea);
+const FluentInputWithEmoji = withEmoji(FluentInput);
+const FluentTextAreaWithEmoji = withEmoji(FluentTextArea);
 
 export default memo(function App() {
   const [inputValue, setInputValue] = useState<string>('');
