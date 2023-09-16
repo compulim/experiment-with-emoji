@@ -1,13 +1,16 @@
 import { useRefFrom } from 'use-ref-from';
+import mergeRefs from 'merge-refs';
 import React, {
   type ChangeEvent,
   type ComponentType,
   type FocusEvent,
+  forwardRef,
   type KeyboardEvent,
   type SyntheticEvent,
   useCallback,
   useEffect,
-  useRef
+  useRef,
+  type Ref
 } from 'react';
 
 import SelectionAndValue from './private/SelectionAndValue';
@@ -20,18 +23,24 @@ export type InputTargetProps<H> = {
   value?: string;
 };
 
-function WithEmojiController<P extends InputTargetProps<HTMLInputElement> | InputTargetProps<HTMLTextAreaElement>>({
+function WithEmojiController<
+  H extends HTMLInputElement | HTMLTextAreaElement,
+  T extends ComponentType,
+  P extends InputTargetProps<H> = PropsOf<T>
+>({
   componentProps,
   componentType,
   emojiMap = new Map<string, string>(),
+  innerRef,
   onChange
 }: Readonly<{
   componentProps: P;
   componentType: ComponentType<P>;
   emojiMap?: Map<string, string>;
+  innerRef?: Ref<H>;
   onChange?: (value: string | undefined) => void;
 }>) {
-  type H = P extends InputTargetProps<infer H> ? H : never;
+  // type H = P extends InputTargetProps<infer H> ? H : never;
 
   const inputElementRef = useRef<H>(null);
   const placeCheckpointOnChangeRef = useRef<boolean>(false);
@@ -162,30 +171,64 @@ function WithEmojiController<P extends InputTargetProps<HTMLInputElement> | Inpu
     onFocus: handleFocus,
     onKeyDown: handleKeyDown,
     onSelect: handleSelect,
-    ref: inputElementRef
+    ref: mergeRefs(inputElementRef, innerRef)
   } as P);
 }
 
-export default function withEmoji<P extends InputTargetProps<HTMLInputElement> | InputTargetProps<HTMLTextAreaElement>>(
+type PropsOf<T extends ComponentType> = T extends ComponentType<infer P> ? P : never;
+
+export function withEmojiWithInput<T extends ComponentType, P extends InputTargetProps<HTMLInputElement> = PropsOf<T>>(
   componentType: ComponentType<P>
 ) {
-  const WithEmoji = ({
-    emojiMap,
-    onChange,
-    ...props
-  }: Readonly<
-    Omit<P, 'onChange'> & {
-      emojiMap?: Map<string, string>;
-      onChange?: (value: string | undefined) => void;
-    }
-  >) => (
-    <WithEmojiController<P>
-      componentProps={props as unknown as P}
-      componentType={componentType}
-      emojiMap={emojiMap}
-      onChange={onChange}
-    />
-  );
+  const WithEmoji = forwardRef<
+    HTMLInputElement,
+    Readonly<
+      Omit<P, 'emojiMap' | 'onChange'> & {
+        emojiMap?: Map<string, string>;
+        onChange?: (value: string | undefined) => void;
+      }
+    >
+  >(({ emojiMap, onChange, ...props }, ref) => {
+    return (
+      <WithEmojiController<HTMLInputElement, T, P>
+        componentProps={props as P}
+        componentType={componentType}
+        emojiMap={emojiMap}
+        onChange={onChange}
+        innerRef={ref}
+      />
+    );
+  });
+
+  WithEmoji.displayName = `WithEmoji<${componentType.displayName}>`;
+
+  return WithEmoji;
+}
+
+export default function withEmoji<
+  H extends HTMLInputElement | HTMLTextAreaElement,
+  T extends ComponentType = ComponentType,
+  P extends InputTargetProps<H> = PropsOf<T>
+>(componentType: ComponentType<P>) {
+  const WithEmoji = forwardRef<
+    H,
+    Readonly<
+      Omit<P, 'emojiMap' | 'onChange'> & {
+        emojiMap?: Map<string, string>;
+        onChange?: (value: string | undefined) => void;
+      }
+    >
+  >(({ emojiMap, onChange, ...props }, ref) => {
+    return (
+      <WithEmojiController<H, T, P>
+        componentProps={props as P}
+        componentType={componentType}
+        emojiMap={emojiMap}
+        onChange={onChange}
+        innerRef={ref}
+      />
+    );
+  });
 
   WithEmoji.displayName = `WithEmoji<${componentType.displayName}>`;
 

@@ -1,4 +1,13 @@
-import { type ChangeEvent, type ComponentType, forwardRef, memo, useCallback, useState } from 'react';
+import {
+  type ChangeEvent,
+  type ComponentType,
+  forwardRef,
+  memo,
+  useCallback,
+  useRef,
+  useState,
+  useEffect
+} from 'react';
 import { Input, Textarea } from '@fluentui/react-components';
 import { useRefFrom } from 'use-ref-from';
 
@@ -21,7 +30,7 @@ TextArea.displayName = 'TextArea';
 
 const FluentInput = forwardRef<
   HTMLInputElement | null,
-  Omit<PropsOf<typeof Input>, 'onChange'> & { onChange: (event: ChangeEvent<HTMLInputElement>) => void }
+  Omit<PropsOf<typeof Input>, 'onChange'> & { onChange?: (event: ChangeEvent<HTMLInputElement>) => void }
 >(
   // eslint-disable-next-line react/prop-types
   ({ onChange, onFocus, onKeyDown, onSelect, value }, ref) => {
@@ -63,15 +72,16 @@ FluentTextArea.displayName = 'FluentTextArea';
 
 type PropsOf<T extends ComponentType> = T extends ComponentType<infer P> ? P : never;
 
-const TextInputWithEmoji = withEmoji(TextInput);
-const TextAreaWithEmoji = withEmoji(TextArea);
+const TextInputWithEmoji = withEmoji<HTMLInputElement, typeof TextInput>(TextInput);
+const TextAreaWithEmoji = withEmoji<HTMLTextAreaElement, typeof TextArea>(TextArea);
 
-const FluentInputWithEmoji = withEmoji(FluentInput);
-const FluentTextAreaWithEmoji = withEmoji(FluentTextArea);
+const FluentInputWithEmoji = withEmoji<HTMLInputElement, typeof FluentInput>(FluentInput);
+const FluentTextAreaWithEmoji = withEmoji<HTMLTextAreaElement, typeof FluentTextArea>(FluentTextArea);
 
 export default memo(function App() {
   const [inputValue, setInputValue] = useState<string>('');
   const [textAreaValue, setTextAreaValue] = useState<string>('');
+  const textInputRef = useRef<HTMLInputElement>(null);
 
   const handleInputChange = useCallback((value: string | undefined) => setInputValue(value || ''), [setInputValue]);
   const handleTextAreaChange = useCallback(
@@ -79,12 +89,21 @@ export default memo(function App() {
     [setTextAreaValue]
   );
 
+  useEffect(() => {
+    console.log('@@@@@@@@@@@@', { textInput: textInputRef.current });
+  }, [textInputRef]);
+
   return (
     <p>
       <h1>Hello, World!</h1>
       <hr />
       <FluentInputWithEmoji emojiMap={defaultEmojiMap} onChange={handleInputChange} value={inputValue} />
-      <TextInputWithEmoji emojiMap={defaultEmojiMap} onChange={handleInputChange} value={inputValue} />
+      <TextInputWithEmoji
+        emojiMap={defaultEmojiMap}
+        onChange={handleInputChange}
+        ref={textInputRef}
+        value={inputValue}
+      />
       <hr />
       <FluentTextAreaWithEmoji
         aria-label="Hello"
