@@ -1,13 +1,4 @@
-import {
-  type ChangeEvent,
-  type ComponentType,
-  forwardRef,
-  memo,
-  useCallback,
-  useRef,
-  useState,
-  useEffect
-} from 'react';
+import { type ChangeEvent, type ComponentType, forwardRef, memo, useCallback, useRef, useState } from 'react';
 import { Input, Textarea } from '@fluentui/react-components';
 import { useRefFrom } from 'use-ref-from';
 
@@ -33,19 +24,11 @@ const FluentInput = forwardRef<
   Omit<PropsOf<typeof Input>, 'onChange'> & { onChange?: (event: ChangeEvent<HTMLInputElement>) => void }
 >(
   // eslint-disable-next-line react/prop-types
-  ({ onChange, onFocus, onKeyDown, onSelect, value }, ref) => {
+  ({ onChange, onFocus, onKeyDown, value }, ref) => {
     const handleChange = useCallback((event: ChangeEvent<HTMLInputElement>) => onChange?.(event), [onChange]);
 
     return (
-      <Input
-        onChange={handleChange}
-        onFocus={onFocus}
-        onKeyDown={onKeyDown}
-        onSelect={onSelect}
-        ref={ref}
-        type="text"
-        value={value}
-      />
+      <Input onChange={handleChange} onFocus={onFocus} onKeyDown={onKeyDown} ref={ref} type="text" value={value} />
     );
   }
 );
@@ -84,14 +67,11 @@ export default memo(function App() {
   const textInputRef = useRef<HTMLInputElement>(null);
 
   const handleInputChange = useCallback((value: string | undefined) => setInputValue(value || ''), [setInputValue]);
+
   const handleTextAreaChange = useCallback(
     (value: string | undefined) => setTextAreaValue(value || ''),
     [setTextAreaValue]
   );
-
-  useEffect(() => {
-    console.log('@@@@@@@@@@@@', { textInput: textInputRef.current });
-  }, [textInputRef]);
 
   return (
     <p>

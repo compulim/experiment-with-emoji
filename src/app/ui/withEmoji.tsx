@@ -8,12 +8,12 @@ import React, {
   type KeyboardEvent,
   type SyntheticEvent,
   useCallback,
-  useEffect,
+  useMemo,
   useRef,
   type Ref
 } from 'react';
 
-import SelectionAndValue from './private/SelectionAndValue';
+import useUndoStack from './private/useUndoStack';
 
 export type InputTargetProps<H> = {
   onChange?: (event: ChangeEvent<H>) => void;
@@ -22,6 +22,8 @@ export type InputTargetProps<H> = {
   onSelect?: (event: SyntheticEvent<H>) => void;
   value?: string;
 };
+
+type PropsOf<T> = T extends ComponentType<infer P> ? P : never;
 
 function WithEmojiController<
   T extends ComponentType<P>,
@@ -40,54 +42,17 @@ function WithEmojiController<
   innerRef?: Ref<H>;
   onChange?: (value: string | undefined) => void;
 }>) {
-  // type H = P extends InputTargetProps<infer H> ? H : never;
-
+  const { value } = componentProps;
   const inputElementRef = useRef<H>(null);
-  const placeCheckpointOnChangeRef = useRef<boolean>(false);
-  const prevInputStateRef = useRef<SelectionAndValue>(new SelectionAndValue('', Infinity, Infinity));
-  const undoStackRef = useRef<SelectionAndValue[]>([]);
-  const valueRef = useRefFrom(componentProps.value);
+  const onChangeRef = useRefFrom(onChange);
 
-  const rememberInputState = useCallback(() => {
-    const { current } = inputElementRef;
-
-    if (current) {
-      const { selectionEnd, selectionStart, value } = current;
-
-      prevInputStateRef.current = new SelectionAndValue(value, selectionStart, selectionEnd);
-    }
-  }, [inputElementRef, prevInputStateRef]);
-
-  // This is for moving the selection while setting the send box value.
-  // If we only use setSendBox, we will need to wait for the next render cycle to get the value in, before we can set selectionEnd/Start.
-  const setSelectionRangeAndValue = useCallback(
-    (value: string, selectionStart: number | null, selectionEnd: number | null) => {
-      const { current } = inputElementRef;
-
-      if (current) {
-        // We need to set the value, before selectionStart/selectionEnd.
-        current.value = value;
-
-        current.selectionStart = selectionStart;
-        current.selectionEnd = selectionEnd;
-      }
-
-      onChange?.(value);
-    },
-    [inputElementRef, onChange]
-  );
+  const { push, undo } = useUndoStack(inputElementRef);
+  const valueRef = useRefFrom(value);
 
   const handleChange = useCallback<(event: ChangeEvent<H>) => void>(
-    ({ currentTarget: { selectionEnd, selectionStart, value } }) => {
-      if (placeCheckpointOnChangeRef.current) {
-        undoStackRef.current.push(prevInputStateRef.current);
+    ({ currentTarget }) => {
+      const { selectionEnd, selectionStart, value } = currentTarget;
 
-        placeCheckpointOnChangeRef.current = false;
-      }
-
-      // Currently, we cannot detect whether the change is due to clipboard paste or pressing a key on the keyboard.
-      // We should not change to emoji when the user is pasting text.
-      // We would assume, for a single character addition, the user must be pressing a key.
       if (
         typeof selectionEnd === 'number' &&
         typeof selectionStart === 'number' &&
@@ -99,83 +64,80 @@ function WithEmojiController<
           const { length } = emoticon;
 
           if (value.slice(selectionEnd - length, selectionEnd) === emoticon) {
-            undoStackRef.current.push(new SelectionAndValue(value, selectionStart, selectionEnd));
+            push();
 
-            placeCheckpointOnChangeRef.current = true;
+            const nextValue = `${value.slice(0, selectionEnd - length)}${emoji}${value.slice(selectionEnd)}`;
+            const nextSelectionEnd = selectionEnd + emoji.length - length;
 
-            value = `${value.slice(0, selectionEnd - length)}${emoji}${value.slice(selectionEnd)}`;
-            selectionEnd = selectionEnd += emoji.length - length;
+            currentTarget.value = nextValue;
+
+            currentTarget.selectionStart = selectionStart;
+            currentTarget.selectionEnd = nextSelectionEnd;
+
+            break;
           }
         }
       }
 
-      setSelectionRangeAndValue(value, selectionStart, selectionEnd);
+      value || push();
+
+      onChangeRef.current?.(currentTarget.value);
     },
-    [emojiMap, placeCheckpointOnChangeRef, prevInputStateRef, setSelectionRangeAndValue, undoStackRef, valueRef]
+    [push, emojiMap, onChangeRef, valueRef]
   );
 
-  const handleFocus = useCallback<(event: FocusEvent<H>) => void>(() => {
-    rememberInputState();
-
-    placeCheckpointOnChangeRef.current = true;
-  }, [placeCheckpointOnChangeRef, rememberInputState]);
+  const handleFocus = useCallback<(event: FocusEvent<H>) => void>(() => push(), [push]);
 
   const handleKeyDown = useCallback<(event: KeyboardEvent<H>) => void>(
+    // eslint-disable-next-line complexity
     event => {
       const { ctrlKey, key, metaKey } = event;
 
-      if ((ctrlKey || metaKey) && (key === 'Z' || key === 'z')) {
+      const uppercaseKey = key.toUpperCase();
+
+      if ((ctrlKey || metaKey) && uppercaseKey === 'Z') {
         event.preventDefault();
 
-        const poppedInputState = undoStackRef.current.pop();
+        undo();
 
-        prevInputStateRef.current = poppedInputState || new SelectionAndValue('', 0, 0);
-
-        setSelectionRangeAndValue(
-          prevInputStateRef.current.value,
-          prevInputStateRef.current.selectionStart,
-          prevInputStateRef.current.selectionEnd
-        );
+        onChangeRef.current?.(event.currentTarget.value);
+      } else if (key === 'Backspace') {
+        push('backspace');
+      } else if (key === 'Delete') {
+        push('delete');
+      } else if (
+        key === 'ArrowLeft' ||
+        key === 'ArrowRight' ||
+        key === 'ArrowUp' ||
+        key === 'ArrowDown' ||
+        key === 'Home' ||
+        key === 'End' ||
+        key === 'PageUp' ||
+        key === 'PageDown' ||
+        ((ctrlKey || metaKey) && uppercaseKey === 'A') ||
+        ((ctrlKey || metaKey) && (uppercaseKey === 'V' || uppercaseKey === 'X'))
+      ) {
+        push();
+      } else {
+        push('change');
       }
     },
-    [prevInputStateRef, setSelectionRangeAndValue, undoStackRef]
+    [push, onChangeRef, undo]
   );
 
-  const handleSelect = useCallback(
-    (event: SyntheticEvent<H>): void => {
-      const {
-        currentTarget: { selectionEnd, selectionStart, value }
-      } = event;
-
-      if (value === prevInputStateRef.current.value) {
-        // When caret move, we should push to undo stack on change.
-        placeCheckpointOnChangeRef.current = true;
-      }
-
-      prevInputStateRef.current = new SelectionAndValue(value, selectionStart, selectionEnd);
-    },
-    [placeCheckpointOnChangeRef, prevInputStateRef]
+  useMemo(
+    () => (!inputElementRef.current || inputElementRef.current.value !== value) && push(),
+    [push, inputElementRef, value]
   );
-
-  useEffect(rememberInputState, [rememberInputState]);
-
-  // TODO: Fix this:
-  //       1. Type "ABC"
-  //       2. Send props.value as "XYZ"
-  //       3. Press CTRL-Z should revert to "ABC", instead of empty
-  //       Cause: we did not checkpoint when receiving a new props.value.
 
   return React.createElement(componentType, {
     ...componentProps,
     onChange: handleChange,
     onFocus: handleFocus,
     onKeyDown: handleKeyDown,
-    onSelect: handleSelect,
     ref: mergeRefs(inputElementRef, innerRef)
   } as P);
 }
-
-type PropsOf<T> = T extends ComponentType<infer P> ? P : never;
 
 export default function withEmoji<
   T extends ComponentType<P>,
@@ -192,7 +154,8 @@ export default function withEmoji<
     >
   >(({ emojiMap, onChange, ...props }, ref) => (
     <WithEmojiController<T, P, H>
-      componentProps={props as P}
+      // TODO: Do we have a type bug here?
+      componentProps={props as unknown as P}
       componentType={componentType}
       emojiMap={emojiMap}
       innerRef={ref}
